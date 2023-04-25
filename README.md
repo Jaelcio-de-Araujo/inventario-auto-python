@@ -33,9 +33,9 @@ Este projeto foi desenvolvido por João Lucas Férras da Motta dos Santos.
 
 Este projeto é de código aberto e contribuições são bem-vindas. Para contribuir, siga os seguintes passos:
 
-1 Fork o repositório do projeto.
-2 Crie uma branch para sua nova feature ou correção de bug: git checkout -b nome-da-feature-ou-bugfix
-3 Faça as mudanças necessárias e faça commit das mudanças: git commit -am 'descrição do commit'
-4 Push para a branch: git push origin nome-da-feature-ou-bugfix
-5 Crie um Pull Request para o repositório original.
-6 Aguarde a revisão do seu Pull Request.
+- Fork o repositório do projeto.
+- Crie uma branch para sua nova feature ou correção de bug: git checkout -b nome-da-feature-ou-bugfix
+- Faça as mudanças necessárias e faça commit das mudanças: git commit -am 'descrição do commit'
+- Push para a branch: git push origin nome-da-feature-ou-bugfix
+- Crie um Pull Request para o repositório original.
+- Aguarde a revisão do seu Pull Request.
