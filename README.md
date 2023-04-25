@@ -27,7 +27,7 @@ Caso esteja usando através da CLI basta executar o arquivo no terminal, exemplo
 O resultado da execução será um arquivo Excel salvo no bucket S3 configurado, contendo informações sobre as ferramentas da AWS mencionadas anteriormente.
 
 ## Desenvolvedor
-Este projeto foi desenvolvido por *João Lucas Férras da Motta dos Santos*.
+Este projeto foi desenvolvido por **João Lucas Férras da Motta dos Santos**.
 
 ## Contribuição
 
