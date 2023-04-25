@@ -17,7 +17,7 @@ As seguintes variáveis de ambiente são necessárias:
 - AWS_ACCESS_KEY_ID: ID da chave de acesso da AWS
 - AWS_SECRET_ACCESS_KEY: Chave secreta de acesso da AWS
 - BUCKET_S3: Nome do bucket S3 para salvar o arquivo Excel
-Caso esteja usando a CLI precisa estar logado através do comando "aws configure", a variável com o nome do bucket também é necessária.
+- Caso esteja usando a CLI precisa estar logado através do comando "aws configure", a variável com o nome do bucket também é necessária.
 
 ## Como usar
 
