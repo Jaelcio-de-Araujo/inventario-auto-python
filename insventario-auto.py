@@ -1,11 +1,11 @@
 import boto3
 import json
 import pandas as pd
-import os
+import subprocess
 
 lista_de_arquivos = []
-
-class EC2InstancesStatus:
+ 
+class EC2Status:
     
     def __init__(self, region_name_us_east_1='us-east-1', region_name_sa_east_1='sa-east-1'):
         self.session_us_east_1 = boto3.Session(region_name=region_name_us_east_1)
@@ -18,6 +18,7 @@ class EC2InstancesStatus:
 
     def get_status(self, client, client_ssm):
         instance_list = []
+        account_id = boto3.client('sts').get_caller_identity()['Account']
         
         next_token = None
                 
@@ -40,13 +41,13 @@ class EC2InstancesStatus:
             ping_status = instance.get('PingStatus', 'Unknown')
             platform_type = instance.get('PlatformType', 'Unknown')
             os_type = instance.get('PlatformName', 'Unknown') + ' ' + instance.get('PlatformVersion', 'Unknown')
-                    
             teste.append({'Id': instance_id, 'PingStatus': ping_status, 'PlataformType': platform_type, 'OperationSystem': os_type})
 
         instances_status = []
         instances_info = client.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'stopped', 'terminated']}])
         for reservation in instances_info['Reservations']:
             for instance in reservation['Instances']:
+                image_id = instance['ImageId']
                 instance_id = instance['InstanceId']
                 instance_name = next((tag['Value'] for tag in instance['Tags'] if tag['Key'] == 'Name'), '-')
                 ssm_installed = False
@@ -61,6 +62,7 @@ class EC2InstancesStatus:
                 volumes_info = []
                 for volume in self.client_sa_east_1.describe_volumes(Filters=[{'Name': 'attachment.instance-id', 'Values': [instance_id]}])['Volumes']:
                     volumes_info.append({'VolumeId': volume['VolumeId'], 'Type': volume['VolumeType'], 'Size (GiB)': volume['Size'], 'State': volume['State']})
+                
 
                 instance_type_info = self.client_sa_east_1.describe_instance_types(InstanceTypes=[instance['InstanceType']])['InstanceTypes'][0]
                 instance_status = instance['State']['Name']
@@ -69,6 +71,8 @@ class EC2InstancesStatus:
                 
                 instances_status.append({
                 'InstanceId': instance_id,
+                'ImageId': instance['ImageId'],
+                'Account ID': account_id,
                 'InstanceName': instance_name,
                 'SSMAgentInstalled': ssm_installed,
                 'Status': instance_status,
@@ -78,8 +82,7 @@ class EC2InstancesStatus:
                 'AvailabilityZone': availability_zone,
                 'PlataformType': platform_type,
                 'OperationSystem': os_type,
-                'Volumes': volumes_info,
-                'Account': 'PRD'
+                'Volumes': volumes_info
                 })
                 
         return instances_status
@@ -111,11 +114,12 @@ class EBSVolumesStatus:
 
     def get_status(self, client):
         volumes_status = []
+        account_id = boto3.client('sts').get_caller_identity()['Account']
         volumes_info = client.describe_volumes(Filters=[{'Name': 'status', 'Values': ['in-use', 'available']}])['Volumes']
         
         for volume in volumes_info:
             volume_id = volume['VolumeId']
-            volume_name = next((tag['Value'] for tag in volume['Tags'] if tag['Key'] == 'Name'), '-')
+            volume_name = next((tag['Value'] for tag in volume.get('Tags', []) if tag['Key'] == 'Name'), '-')
             volume_type = volume['VolumeType']
             volume_size = volume['Size']
             volume_state = volume['State']
@@ -129,7 +133,8 @@ class EBSVolumesStatus:
                 'Size (GiB)': volume_size,
                 'State': volume_state,
                 'AttachedInstances': attached_instances,
-                'Status': volume_status
+                'Status': volume_status,
+                'Account ID': account_id
             })
             
         total_size = sum([volume['Size (GiB)'] for volume in volumes_status])
@@ -140,7 +145,7 @@ class EBSVolumesStatus:
         })
         
         return volumes_status
-
+        
     def exec_ebs_volumes(self):
         ebs_us_east_1 = self.get_status(self.client_us_east_1)
         ebs_sa_east_1 = self.get_status(self.client_sa_east_1)
@@ -156,7 +161,150 @@ class EBSVolumesStatus:
             lista_de_arquivos.append('EBS - NV.json') 
         
         return ebs_sa_east_1, ebs_us_east_1
+
+class EFSInfo:
+    
+    def __init__(self, region_name_us_east_1='us-east-1', region_name_sa_east_1='sa-east-1'):
+        self.session_us_east_1 = boto3.Session(region_name=region_name_us_east_1)
+        self.client_us_east_1 = self.session_us_east_1.client('efs')
+
+        self.session_sa_east_1 = boto3.Session(region_name=region_name_sa_east_1)
+        self.client_sa_east_1 = self.session_sa_east_1.client('efs')
+    
+    def get_efs_info(self, client):
+        all_efs_info = []
+        file_systems = client.describe_file_systems()
+        account_id = boto3.client('sts').get_caller_identity()['Account']        
+        for file_system in file_systems['FileSystems']:
             
+            all_efs_info.append(
+                {
+                'Name': file_system['Name'],
+                'FileSystemId': file_system['FileSystemId'],
+                'SizeInBytes': file_system['SizeInBytes']['Value'],
+                'LifeCycleState': file_system['LifeCycleState'],
+                'AvailabilityZone': file_system['AvailabilityZoneName'],
+                'Account ID': account_id
+                }
+                )
+                
+        return all_efs_info
+    
+    def save_to_json(self):
+        efs_us_east_1 = self.get_efs_info(self.client_us_east_1)
+        efs_sa_east_1 = self.get_efs_info(self.client_sa_east_1)
+
+        if efs_sa_east_1:
+            with open('/tmp/EFS - SP.json', 'w') as f: 
+                json.dump(efs_sa_east_1, f, indent=4)
+            lista_de_arquivos.append('EFS - SP.json')
+        
+        if efs_us_east_1:
+            with open('/tmp/EFS - NV.json', 'w') as f: 
+                json.dump(efs_us_east_1, f, indent=4)
+            lista_de_arquivos.append('EFS - NV.json') 
+        
+        return efs_sa_east_1, efs_us_east_1
+        
+class FSXInfo:
+    
+    def __init__(self, region_name_us_east_1='us-east-1', region_name_sa_east_1='sa-east-1'):
+        self.session_us_east_1 = boto3.Session(region_name=region_name_us_east_1)
+        self.client_us_east_1 = self.session_us_east_1.client('fsx')
+
+        self.session_sa_east_1 = boto3.Session(region_name=region_name_sa_east_1)
+        self.client_sa_east_1 = self.session_sa_east_1.client('fsx')
+    
+    def get_fsx_info(self, client):
+        all_fsx_info = []
+        account_id = boto3.client('sts').get_caller_identity()['Account']
+        volumes = client.describe_file_systems()
+        
+        for volume in volumes['FileSystems']:
+            
+            all_fsx_info.append(
+                {
+                'FileSystemId': volume['FileSystemId'],
+                'OwnerId': volume['OwnerId'],
+                'FileSystemType': volume['FileSystemType'],
+                'Size': volume['StorageCapacity'],
+                'StorageType': volume['StorageType'],
+                'Lifecycle': volume['Lifecycle'],
+                'Account ID': account_id
+                }
+                )
+                
+        return all_fsx_info
+    
+    def save_to_json(self):
+        fsx_us_east_1 = self.get_fsx_info(self.client_us_east_1)
+        fsx_sa_east_1 = self.get_fsx_info(self.client_sa_east_1)
+
+        if fsx_sa_east_1:
+            with open('/tmp/FSX - SP.json', 'w') as f: 
+                json.dump(fsx_sa_east_1, f, indent=4)
+            lista_de_arquivos.append('FSX - SP.json')
+        
+        if fsx_us_east_1:
+            with open('/tmp/FSX - NV.json', 'w') as f: 
+                json.dump(fsx_us_east_1, f, indent=4)
+            lista_de_arquivos.append('FSX - NV.json') 
+        
+        return fsx_sa_east_1, fsx_us_east_1
+  
+class EKSInfo:
+    
+    def __init__(self, region_name_us_east_1='us-east-1', region_name_sa_east_1='sa-east-1'):
+        self.session_us_east_1 = boto3.Session(region_name=region_name_us_east_1)
+        self.client_us_east_1 = self.session_us_east_1.client('ec2')
+
+        self.session_sa_east_1 = boto3.Session(region_name=region_name_sa_east_1)
+        self.client_sa_east_1 = self.session_sa_east_1.client('ec2')
+    
+    def get_eks_info(self, client):
+        all_eks_info = []
+        account_id = boto3.client('sts').get_caller_identity()['Account']
+        instances_info = client.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'stopped', 'terminated']}, {'Name': 'tag-key', 'Values': ['eks:nodegroup-name', 'eks:cluster-name']}])
+        for reservation in instances_info['Reservations']:
+            for instance in reservation['Instances']:
+                instance_name = next((tag['Value'] for tag in instance['Tags'] if tag['Key'] == 'Name'), '-')
+                nodegroup_name = next((tag['Value'] for tag in instance['Tags'] if tag['Key'] == 'eks:nodegroup-name'), '-')
+                cluster_name = next((tag['Value'] for tag in instance['Tags'] if tag['Key'] == 'eks:cluster-name'), None)
+                availability_zone = instance['Placement']['AvailabilityZone']
+                instance_type_info = self.client_sa_east_1.describe_instance_types(InstanceTypes=[instance['InstanceType']])['InstanceTypes'][0]
+                
+                if cluster_name:
+                    all_eks_info.append({
+                        'ClusterName': cluster_name,
+                        'NodeGroupName': nodegroup_name,
+                        'NodeName': instance_name,
+                        'InstanceFamily': instance_type_info['InstanceType'],
+                        'vCPUs': instance_type_info['VCpuInfo']['DefaultVCpus'],
+                        'Memory (MiB)': instance_type_info['MemoryInfo']['SizeInMiB'],
+                        'AvailabilityZone': availability_zone,
+                        'Account ID': account_id
+                        
+                    })
+                    
+        return all_eks_info
+    
+    def save_to_json(self):
+        eks_us_east_1 = self.get_eks_info(self.client_us_east_1)
+        eks_sa_east_1 = self.get_eks_info(self.client_sa_east_1)
+
+        if eks_us_east_1:
+            with open('/tmp/EKS - NV.json', 'w') as f: 
+                json.dump(eks_us_east_1, f, indent=4)
+            lista_de_arquivos.append('EKS - NV.json') 
+        
+        if eks_sa_east_1:
+            with open('/tmp/EKS - SP.json', 'w') as f: 
+                json.dump(eks_sa_east_1, f, indent=4)
+            lista_de_arquivos.append('EKS - SP.json')
+        
+        return eks_us_east_1, eks_sa_east_1
+
+
 class RDSInfo:
     
     def __init__(self, region_name_us_east_1='us-east-1', region_name_sa_east_1='sa-east-1'):
@@ -168,6 +316,7 @@ class RDSInfo:
     
     def get_rds_info(self, client):
         all_rds_info = []
+        account_id = boto3.client('sts').get_caller_identity()['Account']
         instances = client.describe_db_instances()
         
         for instance in instances['DBInstances']:
@@ -177,10 +326,12 @@ class RDSInfo:
                 {
                 'DBInstanceIdentifier': instance['DBInstanceIdentifier'],
                 'Engine': instance['Engine'],
+                'EngineVersion': instance['EngineVersion'],
                 'AvailabilityZone': instance['AvailabilityZone'],
                 'AllocatedStorage': instance['AllocatedStorage'],
                 'DBInstanceStatus': instance['DBInstanceStatus'],
                 'DBInstanceType': instance.get('DBInstanceClass'),
+                'Account ID': account_id,
                 'Iops' : iops if iops else '-'  # Usa 'N/A' se 'Iops' não existe
                 }
                 )
@@ -214,6 +365,7 @@ class DocDb:
     
     def get_docdb_info(self, client):
         all_docdb_info = []
+        account_id = boto3.client('sts').get_caller_identity()['Account']
         instances = client.describe_db_clusters()
 
         for instance in instances['DBClusters']: 
@@ -227,10 +379,11 @@ class DocDb:
                     'DBClusterMembers' : name,
                     'Status': instance['Status'],
                     'EngineVersion': instance['EngineVersion'],
-                    'AvailabilityZones': instance['AvailabilityZones']
+                    'AvailabilityZones': instance['AvailabilityZones'],
+                    'Account ID': account_id
                     }
             )
-                
+
         return all_docdb_info
     
     def save_docdb_json(self):
@@ -261,6 +414,7 @@ class DynamoDB():
     
     def get_table(self, client):
         tables_list = []
+        account_id = boto3.client('sts').get_caller_identity()['Account']
         table_names = client.list_tables()['TableNames']
          
         for table_name in table_names:
@@ -279,7 +433,8 @@ class DynamoDB():
                     'Status': table['TableStatus'],
                     'ReadCapacityMode': read_capacity_mode,
                     'WriteCapacityMode': write_capacity_mode,
-                    'TotalSize': total_size
+                    'TotalSize': total_size,
+                    'Account ID': account_id
                     })
         return tables_list
         
@@ -310,14 +465,16 @@ class ApiGateWay:
     
     def get_apigateway_info(self, client):
         all_apigateway_info = []
+        account_id = boto3.client('sts').get_caller_identity()['Account']
         apis = client.get_rest_apis()
-
+        
         for api in apis['items']: 
             
             all_apigateway_info.append(
                 {
                     "name": api["name"],
-                    "Id": api["id"]
+                    "Id": api["id"],
+                    'Account ID': account_id
                     }
             )
                 
@@ -340,24 +497,34 @@ class ApiGateWay:
         return apigateway_sa_east_1, apigateway_us_east_1
 
 def lambda_handler(event, context):
+    
+    ec2 = EC2Status()
+    ec2.exec_ec2()
+    
+    eks = EKSInfo()
+    eks.save_to_json() 
+    
+    efs = EFSInfo()
+    efs.save_to_json()
+    
+    fsx = FSXInfo()
+    fsx.save_to_json()
+    
     ebs = EBSVolumesStatus()
     ebs.exec_ebs_volumes()
-     
+    
     rds = RDSInfo()
     rds.save_to_json()
     
-    ec2 = EC2InstancesStatus()
-    ec2.exec_ec2()
+    docdb = DocDb()
+    docdb.save_docdb_json()
     
     dynamo = DynamoDB()
     dynamo.save_tables()
     
-    docdb = DocDb()
-    docdb.save_docdb_json() 
-    
     apigw = ApiGateWay()
     apigw.save_apigateway_json()
-
+     
     json_files = lista_de_arquivos
 
     # dicionário que armazenará cada arquivo JSON convertido em DataFrame
@@ -385,4 +552,5 @@ def lambda_handler(event, context):
     return {
         'statusCode': 200, 
         'body': lista_de_arquivos
-    }
+        }
+
