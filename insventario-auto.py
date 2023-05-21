@@ -1,10 +1,9 @@
 import boto3
 import json
 import pandas as pd
-import subprocess
 
 lista_de_arquivos = []
- 
+
 class EC2Status:
     
     def __init__(self, region_name_us_east_1='us-east-1', region_name_sa_east_1='sa-east-1'):
@@ -80,7 +79,7 @@ class EC2Status:
                 'vCPUs': instance_type_info['VCpuInfo']['DefaultVCpus'],
                 'Memory (MiB)': instance_type_info['MemoryInfo']['SizeInMiB'],
                 'AvailabilityZone': availability_zone,
-                'PlataformType': platform_type,
+                'PlataformType': platform_type, 
                 'OperationSystem': os_type,
                 'Volumes': volumes_info
                 })
@@ -320,21 +319,22 @@ class RDSInfo:
         instances = client.describe_db_instances()
         
         for instance in instances['DBInstances']:
-            iops = instance.get('Iops')  # Verifica se 'Iops' existe no dicionário
+            iops = instance.get('Iops')
             
             all_rds_info.append(
                 {
                 'DBInstanceIdentifier': instance['DBInstanceIdentifier'],
                 'Engine': instance['Engine'],
+                # 'vCPUs': instanceq['ProcessorFeatures'],
                 'EngineVersion': instance['EngineVersion'],
                 'AvailabilityZone': instance['AvailabilityZone'],
                 'AllocatedStorage': instance['AllocatedStorage'],
                 'DBInstanceStatus': instance['DBInstanceStatus'],
                 'DBInstanceType': instance.get('DBInstanceClass'),
+                'Iops' : iops if iops else '-',
                 'Account ID': account_id,
-                'Iops' : iops if iops else '-'  # Usa 'N/A' se 'Iops' não existe
-                }
-                )
+                } 
+                ) 
                 
         return all_rds_info
     
@@ -474,6 +474,9 @@ class ApiGateWay:
                 {
                     "name": api["name"],
                     "Id": api["id"],
+                    'version': api.get('version', '-'),
+                    'endpoint': api['endpointConfiguration']['types'],
+                    'description': api.get('description', '-'),
                     'Account ID': account_id
                     }
             )
@@ -489,20 +492,90 @@ class ApiGateWay:
                 json.dump(apigateway_sa_east_1, f, indent=4)
             lista_de_arquivos.append('ApiGW - SP.json')
         
-        if apigateway_us_east_1:
+        if apigateway_us_east_1: 
             with open('/tmp/ApiGW - NV.json', 'w') as f: 
                 json.dump(apigateway_us_east_1, f, indent=4)
-            lista_de_arquivos.append('ApiGW- NV.json') 
+            lista_de_arquivos.append('ApiGW - NV.json') 
         
         return apigateway_sa_east_1, apigateway_us_east_1
 
-def lambda_handler(event, context):
+class S3:
+    
+    def __init__(self, region_name_us_east_1='us-east-1', region_name_sa_east_1='sa-east-1'):
+        self.session_us_east_1 = boto3.Session(region_name=region_name_us_east_1)
+        self.client_us_east_1 = self.session_us_east_1.client('s3')
+
+        self.session_sa_east_1 = boto3.Session(region_name=region_name_sa_east_1)
+        self.client_sa_east_1 = self.session_sa_east_1.client('s3')
+    
+    def get_s3_info(self, client):
+        s3_info = []
+        account_id = boto3.client('sts').get_caller_identity()['Account']
+        buckets = client.list_buckets()
+    
+        for bucket in buckets['Buckets']:
+            
+            bucket_name = bucket['Name']
+            creation = str(bucket['CreationDate'])
+            
+            s3_info.append({
+                'Name': bucket['Name'],
+                'CreationDate': creation,
+                'Account ID': account_id
+            })
+    
+        return s3_info
+    
+    def save_to_json(self):
+        
+        s3_sa_east_1 = self.get_s3_info(self.client_sa_east_1)
+
+        if s3_sa_east_1:
+            with open('/tmp/S3 - Global.json', 'w') as f: 
+                json.dump(s3_sa_east_1, f, indent=4)
+            lista_de_arquivos.append('S3 - Global.json')
+        
+        return s3_sa_east_1
+
+def lambda_handler(event, context): 
+    
+    inventario = InventarioAWS() 
+    inventario.save_all_data()
+    
+    # ec2 = EC2Status()
+    # ec2.exec_ec2()
+    
+    # sts = boto3.client('sts')
+    # role_arn = 'arn:aws:iam::319192320845:role/Inventario_role'  # Replace with the actual ARN of the role in the target region
+    # assumed_role = sts.assume_role(RoleArn=role_arn, RoleSessionName='AssumedRoleSession')
+    # credentials = assumed_role['Credentials']
+    # access_key = credentials['AccessKeyId']
+    # secret_key = credentials['SecretAccessKey']
+    # session_token = credentials['SessionToken']
+    
+    # # Create a new Boto3 session using the assumed role credentials
+    # session = boto3.Session(aws_access_key_id=access_key,
+    #                         aws_secret_access_key=secret_key,
+    #                         aws_session_token=session_token,
+    #                         region_name='us-east-1')  # Specify the target region
+    
+    # ec2.session_us_east_1 = session  # Update the session for the target region
+    # ec2.client_us_east_1 = session.client('ec2')  # Update the client for the target region
+    # ec2.client_ssm_us_east_1 = session.client('ssm')  # Update the SSM client for the target region
+    
+    # ec2.session_sa_east_1 = session  # Update the session for the target region
+    # ec2.client_sa_east_1 = session.client('ec2')  # Update the client for the target region
+    # ec2.client_ssm_sa_east_1 = session.client('ssm')  # Update the SSM client for the target region
+    # ec2.exec_ec2()
     
     ec2 = EC2Status()
     ec2.exec_ec2()
     
     eks = EKSInfo()
     eks.save_to_json() 
+    
+    s3 = S3()
+    s3.save_to_json()
     
     efs = EFSInfo()
     efs.save_to_json()
@@ -524,7 +597,7 @@ def lambda_handler(event, context):
     
     apigw = ApiGateWay()
     apigw.save_apigateway_json()
-     
+      
     json_files = lista_de_arquivos
 
     # dicionário que armazenará cada arquivo JSON convertido em DataFrame
@@ -546,11 +619,18 @@ def lambda_handler(event, context):
     writer.save()
     
     s3 = boto3.client('s3')
-    bucket_name = os.environ.get('BUCKET_S3')
+    bucket_name = 'inspectorbrlinkprd'
     s3.upload_file('/tmp/resultados.xlsx', bucket_name, 'resultados.xlsx')
+    
+    # account_mapping = {
+    #     'source_account': boto3.client('sts').get_caller_identity()['Account'],
+    #     'target_account': role_arn.split(':')[4]
+    # }
     
     return {
         'statusCode': 200, 
-        'body': lista_de_arquivos
+        'body': {
+            # 'account_mapping': account_mapping,
+            'uploaded_files': json_files
         }
-
+    }
