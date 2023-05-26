@@ -1,5 +1,3 @@
-boto3
-json
-pandas
+xlsxwriter
 datetime
 botocore
