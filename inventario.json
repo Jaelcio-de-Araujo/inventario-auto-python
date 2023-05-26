@@ -1,0 +1,50 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "fsx:DescribeFileSystems",
+                "ec2:DescribeInstances",
+                "fsx:DescribeVolumes",
+                "dynamodb:ListTables",
+                "s3:ListBucket",
+                "s3:GetObject",
+                "ssm:DescribeInstanceInformation",
+                "s3:ListAllMyBuckets",
+                "dynamodb:ListGlobalTables",
+                "dynamodb:DescribeTable",
+                "ec2:DescribeVolumes",
+                "ec2:DescribeInstanceTypes",
+                "eks:ListClusters",
+                "apigateway:GET",
+                "elasticfilesystem:DescribeFileSystems"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "VisualEditor1",
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:ListBucket",
+                "eks:DescribeNodegroup",
+                "eks:ListNodegroups",
+                "rds:DescribeDBInstances",
+                "eks:DescribeCluster",
+                "s3:ListBucket",
+                "rds:DescribeDBClusters"
+            ],
+            "Resource": [
+                "arn:aws:eks:*:12345678901:nodegroup/*",
+                "arn:aws:eks:*:12345678901:cluster/*",
+                "arn:aws:s3:::bucket_name",
+                "arn:aws:s3:::bucket_name/*",
+                "arn:aws:rds:*:12345678901:cluster:*",
+                "arn:aws:rds:*:12345678901:db:*"
+            ]
+        }
+    ]
+}
