@@ -7,23 +7,21 @@ Os recursos mapeados por essa automação são: EC2, EKS, EBS, EFS, FSX, S3, Dyn
 
 Primeiro clone o repositório
 
-git clone https://github.com/joaolfms/inventario-auto.git
+- git clone https://github.com/joaolfms/inventario-auto.git
 
 O script foi escrito em Python 3 e necessita das seguintes bibliotecas: boto3, json, pandas, datetime e botocore
 
 Para isso instale os requirements em uma pasta vazia chamada python
 
-mkdir python
-
-cd python
-
-pip install -r requirements.txt -t .
+- mkdir python
+- cd python
+- pip install -r requirements.txt -t .
 
 Depois dos requirements instalados na pasta python comprima a pasta python
 
-zip -r python.zip python
+- zip -r python.zip python
 
-## Configuração
+## Inicio
 
 Para configurar a função Lambda, é necessário criar uma função e fazer o upload do código e adicionar a layer da biblioteca pandas e xlsxwriter. Além disso, é necessário criar variáveis de ambiente com as credenciais de acesso da AWS e o nome do bucket S3 para salvar o arquivo Excel, o mesmo se aplica para a CLI sendo necessário instalar as bibliotecas atraves do comando "pip install boto3 pandas xlsxwriter".
 
