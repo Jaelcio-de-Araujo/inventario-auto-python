@@ -1,12 +1,27 @@
 <h1 align="center"> Inventário Auto AWS </h1>
 
-Este projeto tem como objetivo realizar a criação de um inventário básico de algumas ferramentas da Amazon Web Services (AWS), tais como EBS Volumes, RDS, EC2 Instances, DynamoDB, DocumentDB e API Gateway.
-## Como funciona
+Este projeto tem como objetivo a criação de uma função lambda que retorna um inventário de recursos da Amazon Web Services (AWS)
+Os recursos mapeados por essa automação são: EC2, EKS, EBS, EFS, FSX, S3, DynamoDB, DocumentDB, RDS e ApiGateWay
 
-O código foi escrito em Python 3 e utiliza a biblioteca boto3 para acessar as informações de cada ferramenta. As informações coletadas são salvas em arquivos JSON e posteriormente convertidas em um arquivo Excel que é enviado para um bucket S3.
+## Como Implementar
 
-O código é executado em uma função Lambda da AWS, que pode ser agendada ou acionada manualmente.
-OBS.: Minha intenção é Dockerizar a aplicação para facilitar o uso de outras formas, tambem é possivel executar através do Terminal ultilizando a CLI AWS.
+Primeiro clone o repositório
+
+git clone https://github.com/joaolfms/inventario-auto.git
+
+O script foi escrito em Python 3 e necessita das seguintes bibliotecas: boto3, json, pandas, datetime e botocore
+
+Para isso instale os requirements em uma pasta vazia chamada python
+
+mkdir python
+
+cd python
+
+pip install -r requirements.txt -t .
+
+Depois dos requirements instalados na pasta python comprima a pasta python
+
+zip -r python.zip python
 
 ## Configuração
 
