@@ -50,7 +50,7 @@
 - Em Trust relationships vá em edit trust policy e cole o conteúdo de trust.json (Nesse caso o ARN precisa ser igual ao da role da conta principal 'inventario_role')
 - Na role 'inventario_role' na conta principal, vá em add permissions e clique em Create inline policy
 - Copie o conteúdo de cross-acount.json e cole na inline policy (Note que o ARN deve ser igual ao da role 'inventario_cross')
-- Repita os passos anterior para adicionar o cross account em outras contas (Preste atenção nos ARNs para não confundir)
+- Repita os passos anteriores para adicionar o cross account em outras contas (Preste atenção nos ARNs para não confundir)
 
 ## Criando a função lambda
 
