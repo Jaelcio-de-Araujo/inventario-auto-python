@@ -8,7 +8,7 @@ lista_de_arquivos = []
  
 class AWSInventario:
     def __init__(self, region_name_us_east_1='us-east-1', region_name_sa_east_1='sa-east-1'):
-        ids = ['012345678901', '012345678902', '012345678903']
+        ids = ['12345678901', '12345678902', '12345678903']
         sts = boto3.client('sts')
         self.regions = {}
 
@@ -589,10 +589,53 @@ def lambda_handler(event, context):
         data.to_excel(writer, sheet_name=sheet_names[i], index=False)
 
     writer.save()
+    
+    
+    import openpyxl
+    from openpyxl.styles import NamedStyle, Font
+    
+    # ...
+    
+    # Código anterior para gerar os dados e salvar o arquivo Excel
+    
+    # Carregar o arquivo Excel gerado
+    workbook = openpyxl.load_workbook('/tmp/InvFull.xlsx')
+    
+    # Definir o estilo "Blue Table Medium 2"
+    blue_table_medium_2 = NamedStyle(name='blue_table_medium_2')
+    blue_table_medium_2.font = Font(bold=True)
+    blue_table_medium_2.header = True
+    blue_table_medium_2.tableStyleInfo = "TableStyleMedium2"
+    
+    # Aplicar o estilo a todas as planilhas
+    for sheet_name in sheet_names:
+        worksheet = workbook[sheet_name]
+        worksheet.append([])  # Adicionar uma linha em branco no final
+        worksheet.append([])  # Adicionar uma linha em branco no final
+        for col in worksheet.columns:
+            max_length = 0
+            column = col[0].column_letter
+            for cell in col:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(cell.value)
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            worksheet.column_dimensions[column].width = adjusted_width
+    
+        worksheet.append([])  # Adicionar uma linha em branco no final
+    
+        for row in worksheet.iter_rows(min_row=1, max_row=1):
+            for cell in row:
+                cell.style = blue_table_medium_2
+    
+    # Salvar o arquivo Excel com as alterações
+    workbook.save('/tmp/InvFull_formatted.xlsx')
 
     s3 = boto3.client('s3')
-    bucket_name = 'bucket-name'
-    s3.upload_file('/tmp/InvFull.xlsx', bucket_name, f'InventarioFullAWS-{data_hoje_formatada}.xlsx') 
+    bucket_name = 'bucket_name' 
+    s3.upload_file('/tmp/InvFull_formatted.xlsx', bucket_name, f'InventarioFullAWS-{data_hoje_formatada}.xlsx') 
 
     return {
         'statusCode': 200,
