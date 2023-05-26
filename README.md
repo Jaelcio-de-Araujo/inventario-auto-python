@@ -23,7 +23,7 @@
 
 ## Criando a role para a função lambda
 
-**Na conta principal em que a função lambda funcionará vá atéo painel do IAM no console da AWS**
+**Na conta principal em que a função lambda funcionará vá até o painel do IAM no console da AWS**
 
 - Vá em roles
 - Create role
