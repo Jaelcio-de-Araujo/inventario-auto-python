@@ -81,7 +81,7 @@
 - Deixe a opção AWS layers marcada
 - Escolha a Layer AWSSDKPandas-Python3.9
 - Em version escolha a última versão
-- depois clique em add
+- Depois clique em add
 - Role para baixo novamente e adicione outra layer
 - Agora seleciona a opção Custom layer
 - Selecione a Layer que criamos e a versão
