@@ -1,0 +1,13 @@
+{
+	"Version": "2012-10-17",
+	"Statement": [
+		{
+			"Effect": "Allow",
+			"Principal": {
+				"AWS": "arn:aws:iam::12345678901:role/Inventario_role",
+				"Service": "lambda.amazonaws.com"
+			},
+			"Action": "sts:AssumeRole"
+		}
+	]
+}
