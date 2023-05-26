@@ -87,7 +87,7 @@
 - Selecione a Layer que criamos e a versão
 - Clique em add
 
-**Pronto agora seu inventário auto está implementado, não esqueça de editar os ids das contas na linha 11 do código**
+**Pronto, agora seu inventário auto está implementado, não esqueça de editar os ids das contas na linha 11 do código**
 
 
 ## Desenvolvedor
