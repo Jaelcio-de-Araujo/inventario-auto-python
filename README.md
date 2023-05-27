@@ -16,7 +16,7 @@ git clone https://github.com/joaolfms/inventario-auto.git
 
 **Para isso instale os requirements em uma pasta vazia chamada python**
 
-```bash
+```zsh
 mkdir python
 
 cd python
