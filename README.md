@@ -8,7 +8,7 @@
 
 **Primeiro clone o repositório**
 
-```
+```bash
 git clone https://github.com/joaolfms/inventario-auto.git
 ```
 
@@ -16,7 +16,7 @@ git clone https://github.com/joaolfms/inventario-auto.git
 
 **Para isso instale os requirements em uma pasta vazia chamada python**
 
-```
+```bash
 mkdir python
 
 cd python
@@ -26,7 +26,7 @@ pip install -r requirements.txt -t .
 
 **Depois dos requirements instalados na pasta python comprima a pasta python**
 
-```
+```bash
 zip -r python.zip python
 ```
 
