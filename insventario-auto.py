@@ -1,18 +1,20 @@
+# Bibliotecas necessárias para o funcionamento do script
+
 import boto3
 import json
 import pandas as pd 
 from datetime import date
 import botocore 
 
-lista_de_arquivos = []
- 
 class AWSInventario:
+    # IDs das contas da AWS para as quais desejamos obter informações
     def __init__(self, region_name_us_east_1='us-east-1', region_name_sa_east_1='sa-east-1'):
         ids = ['12345678901', '12345678902', '12345678903']
         sts = boto3.client('sts')
         self.regions = {}
 
         for id in ids:
+            # Assume o papel 'Inventario_role' em cada conta usando STS (Security Token Service)
             role_arn = f'arn:aws:iam::{id}:role/Inventario_role'
             assumed_role = sts.assume_role(RoleArn=role_arn, RoleSessionName='AssumedRoleSession')
             credentials = assumed_role['Credentials']
@@ -24,7 +26,9 @@ class AWSInventario:
 
             self.regions[id] = {}
             for region_name in [region_name_us_east_1, region_name_sa_east_1]:
+                # Cria uma sessão usando as credenciais do papel assumido e a região especificada
                 session = boto3.Session(region_name=region_name, aws_access_key_id=access_key, aws_secret_access_key=secret_key, aws_session_token=session_token)
+                # Cria clientes para os serviços da AWS que desejamos consultar
                 client = session.client('ec2')
                 client_efs = session.client('efs')
                 client_fsx = session.client('fsx')
@@ -33,7 +37,8 @@ class AWSInventario:
                 client_doc_db = session.client('docdb')
                 client_dynamodb = session.client('dynamodb')
                 client_apigateway = session.client('apigateway')
-                client_s3 = session.client('s3')
+                 
+                # Armazena as sessões e clientes em um dicionário para cada regiãoclient_s3 = session.client('s3')
                 self.regions[id][region_name] = {
                     'session': session, 
                     'client': client, 
@@ -52,6 +57,7 @@ class AWSInventario:
         client = region['client']
         client_ssm = region['client_ssm']
         
+        # Obtém informações sobre as instâncias do EC2 usando o SSM (Systems Manager) e o client EC2
         instance_list = []
         next_token = None
                 
@@ -67,14 +73,14 @@ class AWSInventario:
             if not next_token:
                 break
                 
-        teste = []
+        instances_ssm = []
                 
         for instance in instance_list:
             instance_id = instance['InstanceId']
             ping_status = instance.get('PingStatus', 'Unknown')
             platform_type = instance.get('PlatformType', 'Unknown')
             os_type = instance.get('PlatformName', 'Unknown') + ' ' + instance.get('PlatformVersion', 'Unknown')
-            teste.append({'Id': instance_id, 'PingStatus': ping_status, 'PlataformType': platform_type, 'OperationSystem': os_type})
+            instances_ssm.append({'Id': instance_id, 'PingStatus': ping_status, 'PlataformType': platform_type, 'OperationSystem': os_type})
 
         instances_status = []
         instances_info = client.describe_instances(Filters=[{'Name': 'instance-state-name', 'Values': ['running', 'stopped', 'terminated']}])
@@ -84,12 +90,10 @@ class AWSInventario:
                 image_id = instance['ImageId']
                 instance_id = instance['InstanceId']
                 instance_name = next((tag['Value'] for tag in instance['Tags'] if tag['Key'] == 'Name'), '-')
-                ssm_installed = any(info['Id'] == instance_id for info in teste)
-                
-                # Get AZ information
+                ssm_installed = any(info['Id'] == instance_id for info in instances_ssm)
+               
                 availability_zone = instance['Placement']['AvailabilityZone']
                 
-                # Get attached volumes information
                 volumes_info = []
                 
                 for volume in client.describe_volumes(Filters=[{'Name': 'attachment.instance-id', 'Values': [instance_id]}])['Volumes']:
@@ -230,7 +234,7 @@ class AWSInventario:
                 {
                 'DBInstanceIdentifier': instance['DBInstanceIdentifier'],
                 'Engine': instance['Engine'],
-                # 'vCPUs': instanceq['ProcessorFeatures'],
+                # 'vCPUs': instance['ProcessorFeatures'],
                 'EngineVersion': instance['EngineVersion'],
                 'AvailabilityZone': instance['AvailabilityZone'],
                 'AllocatedStorage': instance['AllocatedStorage'],
@@ -381,9 +385,7 @@ class AWSInventario:
                     file_path = f'/tmp/ebs - {id} - {region_name}.json'
                     with open(file_path, 'w') as f:
                         json.dump(ebs_status, f, indent=4)
-    
-                    lista_de_arquivos.append(f'ebs - {id} - {region_name}.json')
-    
+        
                     # Lê o arquivo JSON e adiciona os dados ao DataFrame combinado
                     with open(file_path, 'r') as f:
                         data = pd.read_json(f)
@@ -402,9 +404,7 @@ class AWSInventario:
                     file_path = f'/tmp/efs - {id} - {region_name}.json'
                     with open(file_path, 'w') as f:
                         json.dump(efs_status, f, indent=4)
-    
-                    lista_de_arquivos.append(f'efs - {id} - {region_name}.json')
-    
+        
                     # Lê o arquivo JSON e adiciona os dados ao DataFrame combinado
                     with open(file_path, 'r') as f:
                         data = pd.read_json(f)
@@ -423,9 +423,7 @@ class AWSInventario:
                     file_path = f'/tmp/fsx - {id} - {region_name}.json'
                     with open(file_path, 'w') as f:
                         json.dump(fsx_status, f, indent=4)
-    
-                    lista_de_arquivos.append(f'fsx - {id} - {region_name}.json')
-    
+        
                     # Lê o arquivo JSON e adiciona os dados ao DataFrame combinado
                     with open(file_path, 'r') as f:
                         data = pd.read_json(f)
@@ -444,9 +442,7 @@ class AWSInventario:
                     file_path = f'/tmp/eks - {id} - {region_name}.json'
                     with open(file_path, 'w') as f:
                         json.dump(eks_status, f, indent=4)
-    
-                    lista_de_arquivos.append(f'eks - {id} - {region_name}.json')
-    
+        
                     # Lê o arquivo JSON e adiciona os dados ao DataFrame combinado
                     with open(file_path, 'r') as f:
                         data = pd.read_json(f)
@@ -465,9 +461,7 @@ class AWSInventario:
                     file_path = f'/tmp/rds - {id} - {region_name}.json'
                     with open(file_path, 'w') as f:
                         json.dump(rds_status, f, indent=4)
-    
-                    lista_de_arquivos.append(f'rds - {id} - {region_name}.json')
-    
+        
                     # Lê o arquivo JSON e adiciona os dados ao DataFrame combinado
                     with open(file_path, 'r') as f:
                         data = pd.read_json(f)
@@ -486,9 +480,7 @@ class AWSInventario:
                     file_path = f'/tmp/doc - {id} - {region_name}.json'
                     with open(file_path, 'w') as f:
                         json.dump(doc_status, f, indent=4)
-    
-                    lista_de_arquivos.append(f'doc - {id} - {region_name}.json')
-    
+        
                     # Lê o arquivo JSON e adiciona os dados ao DataFrame combinado
                     with open(file_path, 'r') as f:
                         data = pd.read_json(f)
@@ -508,9 +500,7 @@ class AWSInventario:
                     file_path = f'/tmp/dynamo - {id} - {region_name}.json'
                     with open(file_path, 'w') as f:
                         json.dump(dynamo_status, f, indent=4)
-    
-                    lista_de_arquivos.append(f'dynamo - {id} - {region_name}.json')
-    
+        
                     # Lê o arquivo JSON e adiciona os dados ao DataFrame combinado
                     with open(file_path, 'r') as f:
                         data = pd.read_json(f)
@@ -530,8 +520,6 @@ class AWSInventario:
                     with open(file_path, 'w') as f:
                         json.dump(apigw_status, f, indent=4)
     
-                    lista_de_arquivos.append(f'apigw - {id} - {region_name}.json')
-    
                     # Lê o arquivo JSON e adiciona os dados ao DataFrame combinado
                     with open(file_path, 'r') as f:
                         data = pd.read_json(f)
@@ -550,8 +538,6 @@ class AWSInventario:
                     file_path = f'/tmp/S3 - {id} - {region_name}.json'
                     with open(file_path, 'w') as f:
                         json.dump(s3_status, f, indent=4)
-    
-                    lista_de_arquivos.append(f'S3 - {id} - {region_name}.json')
     
                     # Lê o arquivo JSON e adiciona os dados ao DataFrame combinado
                     with open(file_path, 'r') as f:
@@ -593,12 +579,7 @@ def lambda_handler(event, context):
     
     import openpyxl
     from openpyxl.styles import NamedStyle, Font
-    
-    # ...
-    
-    # Código anterior para gerar os dados e salvar o arquivo Excel
-    
-    # Carregar o arquivo Excel gerado
+
     workbook = openpyxl.load_workbook('/tmp/InvFull.xlsx')
     
     # Definir o estilo "Blue Table Medium 2"
