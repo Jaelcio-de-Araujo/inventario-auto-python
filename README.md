@@ -19,9 +19,7 @@ git clone https://github.com/joaolfms/inventario-auto.git
 ```zsh
 mkdir python
 
-cd python
-
-pip install -r requirements.txt -t .
+pip install -r requirements.txt -t ./python
 ```
 
 **Depois dos requirements instalados na pasta python comprima a pasta python**
