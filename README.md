@@ -1,8 +1,21 @@
 # Inventário Auto AWS
 
-**Este projeto tem como objetivo a criação de uma função lambda que retorna um inventário de recursos da Amazon Web Services (AWS).** 
 
-**Os recursos mapeados por essa automação são: EC2, EKS, EBS, EFS, FSX, S3, DynamoDB, DocumentDB, RDS e ApiGateWay.**
+**Este documento tem como objetivo apresentar a automação desenvolvida para coletar dados de recursos da AWS e entregar, de forma automatizada, um arquivo contendo informações sobre cada recurso, além de fornecer instruções sobre como acessar a planilha gerada. A solução foi implementada utilizando um script Python, fazendo uso das bibliotecas Pandas, XlsxWriter e Boto3 (SDK da AWS).**
+
+**A execução do script ocorre por meio de uma função Lambda, acionada uma vez por mês pelo Amazon EventBridge. Essa função tem visibilidade para todas as contas configuradas, permitindo que o script obtenha informações dos recursos presentes nas regiões selecionadas, sa-east-1 (São Paulo) e us-east-1 (N-Virginia). Caso algum recurso não seja encontrado, os dados correspondentes não serão incluídos na planilha.**
+
+**A solução automatizada garante a coleta eficiente de informações em todas as contas e regiões selecionadas, proporcionando uma visão abrangente dos recursos existentes na infraestrutura da AWS. O uso das bibliotecas Pandas e XlsxWriter permite a manipulação e organização dos dados de forma adequada, enquanto o Boto3 facilita a integração com os serviços da AWS.**
+
+**Para acessar a planilha gerada, siga as etapas abaixo:**
+
+- Após a execução da função Lambda, aguarde até que o processamento seja concluído. Isso pode levar alguns minutos, dependendo do número de contas e recursos.
+- Acesse o serviço do Amazon S3, que é onde o arquivo da planilha é armazenado.
+- Navegue para o bucket (repositório) especificado na configuração da função Lambda.
+- Procure o arquivo InventarioInventarioFullAWS-data-da-ultima-execução.
+- Baixe o arquivo da planilha para o seu dispositivo ou visualize-o diretamente no navegador, se houver suporte.
+
+**Essa solução automatizada simplifica o processo de coleta de dados da AWS, proporcionando uma visão abrangente e organizada dos recursos utilizados nas contas e regiões configuradas. A execução periódica agendada via EventBridge garante a atualização regular das informações, facilitando a análise e o monitoramento da infraestrutura.**
 
 ## Início
 
